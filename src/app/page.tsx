@@ -82,7 +82,6 @@ export default function Page() {
   const liveWhisper = useRef<LiveWhisperSession | null>(null);
   const liveMode = useRef(false);
   const browserSpeechFailed = useRef(false);
-  const openedHistory = useRef(false);
 
   useEffect(() => {
     try { setReviews(parseReviews(JSON.parse(localStorage.getItem(reviewStorageKey) || "[]"))); }
@@ -108,12 +107,6 @@ export default function Page() {
     window.addEventListener("resize", update);
     return () => { window.removeEventListener("scroll", update); window.removeEventListener("resize", update); cancelAnimationFrame(frame); };
   }, []);
-
-  useEffect(() => {
-    if (!introDone || !historyTasks.length || openedHistory.current) return;
-    openedHistory.current = true;
-    document.getElementById("tasks")?.scrollIntoView({ behavior: "instant" });
-  }, [introDone, historyTasks.length]);
 
   useEffect(() => {
     if (status !== "listening") return;
