@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { Task } from "@/lib/tasks";
 import { LiveWhisperSession } from "@/lib/live-whisper";
 import { calculateCalibration, calibratedConfidence, parseReviews, reviewedFields, CALIBRATION_VERSION, MIN_REVIEWED_TASKS, type Review } from "@/lib/calibration";
@@ -335,11 +335,10 @@ export default function Page() {
   const wordCount = transcript.trim() ? transcript.trim().split(/\s+/).length : 0;
   const totalMs = metrics.transcriptionMs + metrics.extractionMs;
   const calibration = calculateCalibration(reviews, extractionModel);
-  const docked = introDone && scrollProgress > 0.8;
-
   return <main className="shell">
     <RecordOrb dockProgress={introDone ? scrollProgress : 0} recording={status === "listening"} busy={status === "stopping" || status === "transcribing" || status === "processing"} ready={introDone} onReady={() => setIntroDone(true)} onPress={status === "listening" ? stopRecording : startRecording} />
-    {introDone && (status === "listening" || status === "stopping" || status === "transcribing") && <div className={`orb-status ${docked ? "is-docked" : ""}`} role="status">{status === "listening" ? "RECORDING · TAP CIRCLE TO STOP" : status === "stopping" ? "FINISHING RECORDING" : "TRANSCRIBING AUDIO"}</div>}
+    {introDone && (status === "listening" || status === "stopping" || status === "transcribing") && <div className="orb-status" style={{ "--dock-progress": scrollProgress } as CSSProperties} role="status">{status === "listening" ? "RECORDING · TAP CIRCLE TO STOP" : status === "stopping" ? "FINISHING RECORDING" : "TRANSCRIBING AUDIO"}</div>}
+    <footer className="record-dock" style={{ "--dock-progress": introDone ? scrollProgress : 0 } as CSSProperties} aria-hidden="true"><span>CAPTURE</span><span>VOICE → ACTION</span></footer>
     <div className={`site-content ${introDone ? "is-ready" : ""}`}>
     <header className="top"><a className="wordmark" href="#top" aria-label="VOXTASK home">voxtask<span>.</span></a><nav aria-label="Main navigation"><a href="#tasks">TASKS</a><a href="#capture">CAPTURE</a><a href="#settings">SETTINGS</a></nav><span className="environment">VOICE → ACTION</span></header>
     <section className="hero" id="top" aria-label="Record a thought" />
