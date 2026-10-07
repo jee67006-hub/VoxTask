@@ -335,12 +335,16 @@ export default function Page() {
   const wordCount = transcript.trim() ? transcript.trim().split(/\s+/).length : 0;
   const totalMs = metrics.transcriptionMs + metrics.extractionMs;
   const calibration = calculateCalibration(reviews, extractionModel);
+  const dockVisible = introDone && scrollProgress > 0.85;
   return <main className="shell">
     <RecordOrb dockProgress={introDone ? scrollProgress : 0} recording={status === "listening"} busy={status === "stopping" || status === "transcribing" || status === "processing"} ready={introDone} onReady={() => setIntroDone(true)} onPress={status === "listening" ? stopRecording : startRecording} />
     {introDone && (status === "listening" || status === "stopping" || status === "transcribing") && <div className="orb-status" style={{ "--dock-progress": scrollProgress } as CSSProperties} role="status">{status === "listening" ? "RECORDING · TAP CIRCLE TO STOP" : status === "stopping" ? "FINISHING RECORDING" : "TRANSCRIBING AUDIO"}</div>}
-    <footer className="record-dock" style={{ "--dock-progress": introDone ? scrollProgress : 0 } as CSSProperties} aria-hidden="true"><span>CAPTURE</span><span>VOICE → ACTION</span></footer>
+    <footer className={`record-dock ${dockVisible ? "is-visible" : ""}`} style={{ "--dock-progress": introDone ? scrollProgress : 0 } as CSSProperties} aria-hidden={!dockVisible} inert={!dockVisible}>
+      <a className="dock-brand" href="#top" aria-label="VOXTASK home">voxtask<span>.</span><small>VOICE → ACTION</small></a>
+      <span className="dock-orb-space" aria-hidden="true" />
+      <nav aria-label="Main navigation"><a href="#tasks">TASKS</a><a href="#capture">CAPTURE</a><a href="#settings">SETTINGS</a></nav>
+    </footer>
     <div className={`site-content ${introDone ? "is-ready" : ""}`}>
-    <header className="top"><a className="wordmark" href="#top" aria-label="VOXTASK home">voxtask<span>.</span></a><nav aria-label="Main navigation"><a href="#tasks">TASKS</a><a href="#capture">CAPTURE</a><a href="#settings">SETTINGS</a></nav><span className="environment">VOICE → ACTION</span></header>
     <section className="hero" id="top" aria-label="Record a thought" />
     <section className="history-section" id="tasks"><div className="history-heading"><div><p className="eyebrow">YOUR WORKSPACE</p><h1>Task history<span>.</span></h1></div><span className="count">{historyTasks.length} saved</span></div>
       {historyTasks.length ? <div className="history-grid">{historyTasks.map(task => <article className={`history-card priority-border-${task.priority}`} key={task.id}><div className="history-card-top"><span className={`priority priority-${task.priority}`}>{task.priority}</span><span>{task.dueDate ?? task.dueDateText ?? "No due date"}{task.dueTimeText ? ` · ${task.dueTimeText}` : task.dueTime ? ` · ${task.dueTime}` : ""}</span></div><h2>{task.title}</h2><p>{task.description || task.sourceText}</p><div className="history-card-foot"><span>Added {new Date(task.savedAt).toLocaleDateString()}</span><div className="history-card-controls"><label>Status <select value={task.status} onChange={event => updateHistoryStatus(task.id, event.target.value as Task["status"])}><option value="todo">To do</option><option value="in_progress">In progress</option><option value="done">Done</option></select></label><button onClick={() => removeHistoryTask(task.id)} aria-label={`Remove ${task.title} from history`}>Remove</button></div></div></article>)}</div> : <p className="history-empty">Your captured tasks will land here. Tap the circle to begin.</p>}
