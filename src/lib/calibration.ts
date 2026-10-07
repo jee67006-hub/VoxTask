@@ -11,6 +11,7 @@ const reviewedFieldsSchema = z.object({
   dueTime: z.string().nullable(),
   dueTimeText: z.string().nullable(),
   priority: z.enum(["low", "medium", "high"]),
+  status: z.enum(["todo", "in_progress", "done"]).optional(),
 });
 export type ReviewedFields = z.infer<typeof reviewedFieldsSchema>;
 
@@ -25,7 +26,7 @@ export const reviewSchema = z.object({
   missedTasks: z.number().int().min(0),
 });
 export type Review = z.infer<typeof reviewSchema>;
-export type ConfidenceField = "task" | "date" | "priority";
+export type ConfidenceField = "task" | "date" | "priority" | "status";
 export type FieldAccuracy = { correct: number; total: number; rate: number | null; lower: number | null; upper: number | null };
 export type Calibration = Record<ConfidenceField, FieldAccuracy> & {
   byDatePresence: Record<"specified" | "none", FieldAccuracy>;
@@ -42,6 +43,7 @@ export function reviewedFields(task: Task): ReviewedFields {
     dueTime: task.dueTime,
     dueTimeText: task.dueTimeText,
     priority: task.priority,
+    status: task.status,
   };
 }
 
@@ -60,7 +62,8 @@ function wilson(correct: number, total: number): FieldAccuracy {
 }
 
 export function calculateCalibration(reviews: Review[], model: string): Calibration {
-  const counts = { task: 0, date: 0, priority: 0 };
+  const counts = { task: 0, date: 0, priority: 0, status: 0 };
+  let statusTotal = 0;
   const dateCounts = { specified: { correct: 0, total: 0 }, none: { correct: 0, total: 0 } };
   const priorityCounts = { low: { correct: 0, total: 0 }, medium: { correct: 0, total: 0 }, high: { correct: 0, total: 0 } };
   let total = 0;
@@ -81,10 +84,14 @@ export function calculateCalibration(reviews: Review[], model: string): Calibrat
       if (predicted.dueDate === corrected.dueDate && predicted.dueTime === corrected.dueTime && sameText(predicted.dueDateText, corrected.dueDateText) && sameText(predicted.dueTimeText, corrected.dueTimeText)) { counts.date++; dateCounts[dateGroup].correct++; }
       priorityCounts[predicted.priority].total++;
       if (predicted.priority === corrected.priority) { counts.priority++; priorityCounts[predicted.priority].correct++; }
+      if (predicted.status && corrected.status) {
+        statusTotal++;
+        if (predicted.status === corrected.status) counts.status++;
+      }
     }
   }
   return {
-    task: wilson(counts.task, total), date: wilson(counts.date, total), priority: wilson(counts.priority, total),
+    task: wilson(counts.task, total), date: wilson(counts.date, total), priority: wilson(counts.priority, total), status: wilson(counts.status, statusTotal),
     byDatePresence: { specified: wilson(dateCounts.specified.correct, dateCounts.specified.total), none: wilson(dateCounts.none.correct, dateCounts.none.total) },
     byPriority: { low: wilson(priorityCounts.low.correct, priorityCounts.low.total), medium: wilson(priorityCounts.medium.correct, priorityCounts.medium.total), high: wilson(priorityCounts.high.correct, priorityCounts.high.total) },
     missedTasks, reviews: reviewCount,

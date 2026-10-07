@@ -3,7 +3,7 @@ import { normalizeTasks } from "./tasks";
 
 const base = {
   title: "Call Adarsh", description: null, priority: "medium", dueDate: null, dueDateText: null, dueTime: null, dueTimeText: null,
-  dependencies: [], sourceText: "call Adarsh", needsConfirmation: false,
+  dependencies: [], sourceText: "call Adarsh", status: "todo", needsConfirmation: false,
 };
 
 describe("normalizeTasks", () => {
@@ -21,6 +21,15 @@ describe("normalizeTasks", () => {
 
   it("accepts an empty extraction", () => {
     expect(normalizeTasks({ tasks: [] }, "I am tired today.", "2026-10-07")).toEqual([]);
+  });
+
+  it("keeps explicit in-progress and completed statuses", () => {
+    const transcript = "I started the presentation yesterday. I already called Adarsh.";
+    const tasks = normalizeTasks({ tasks: [
+      { ...base, title: "Finish the presentation", sourceText: "started the presentation", status: "in_progress" },
+      { ...base, title: "Call Adarsh", sourceText: "already called Adarsh", status: "done" },
+    ] }, transcript, "2026-10-07");
+    expect(tasks.map(task => task.status)).toEqual(["in_progress", "done"]);
   });
 
   it("preserves spoken time constraints and corrects Friday from the local date", () => {

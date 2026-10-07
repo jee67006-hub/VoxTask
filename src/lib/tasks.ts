@@ -31,6 +31,7 @@ export const extractionJsonSchema = {
           title: { type: "string" },
           description: nullableString,
           priority: { type: "string", enum: ["low", "medium", "high"] },
+          status: { type: "string", enum: ["todo", "in_progress", "done"] },
           dueDate: nullableString,
           dueDateText: nullableString,
           dueTime: nullableString,
@@ -38,7 +39,7 @@ export const extractionJsonSchema = {
           dependencies: { type: "array", items: { type: "string" } },
           sourceText: { type: "string" },
         },
-        required: ["title", "description", "priority", "dueDate", "dueDateText", "dueTime", "dueTimeText", "dependencies", "sourceText"],
+        required: ["title", "description", "priority", "status", "dueDate", "dueDateText", "dueTime", "dueTimeText", "dependencies", "sourceText"],
         additionalProperties: false,
       },
     },
@@ -46,7 +47,7 @@ export const extractionJsonSchema = {
   required: ["tasks"], additionalProperties: false,
 } as const;
 
-const modelTaskSchema = taskSchema.omit({ id: true, status: true, confidence: true, needsConfirmation: true }).extend({ dueDate: z.string().nullable(), dueTime: z.string().nullable() });
+const modelTaskSchema = taskSchema.omit({ id: true, confidence: true, needsConfirmation: true }).extend({ dueDate: z.string().nullable(), dueTime: z.string().nullable() });
 const modelResponseSchema = z.object({ tasks: z.array(modelTaskSchema).max(30) });
 
 function exactPhrase(transcript: string, phrase: string | null): string | null {
@@ -116,7 +117,7 @@ export function normalizeTasks(raw: unknown, transcript: string, currentDate: st
     accepted.push(taskSchema.parse({
       ...item,
       id: `task_${accepted.length + 1}`,
-      status: "todo",
+      status: item.status,
       sourceText,
       dueDate,
       dueDateText: dateText,

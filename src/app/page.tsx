@@ -51,7 +51,7 @@ export default function Page() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [historyTasks, setHistoryTasks] = useState<HistoryTask[]>([]);
   const [introDone, setIntroDone] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
   const [savedCurrentResult, setSavedCurrentResult] = useState(false);
   const [predictedTasks, setPredictedTasks] = useState<Task[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -82,6 +82,7 @@ export default function Page() {
   const liveWhisper = useRef<LiveWhisperSession | null>(null);
   const liveMode = useRef(false);
   const browserSpeechFailed = useRef(false);
+  const openedHistory = useRef(false);
 
   useEffect(() => {
     try { setReviews(parseReviews(JSON.parse(localStorage.getItem(reviewStorageKey) || "[]"))); }
@@ -93,11 +94,26 @@ export default function Page() {
   }, []);
 
   useEffect(() => {
-    const update = () => setScrolled(window.scrollY > 120);
+    let frame = 0;
+    const update = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        const progress = Math.min(1, Math.max(0, window.scrollY / (window.innerHeight * 0.9)));
+        setScrollProgress((1 - Math.cos(Math.PI * progress)) / 2);
+      });
+    };
     update();
     window.addEventListener("scroll", update, { passive: true });
-    return () => window.removeEventListener("scroll", update);
+    window.addEventListener("resize", update);
+    return () => { window.removeEventListener("scroll", update); window.removeEventListener("resize", update); cancelAnimationFrame(frame); };
   }, []);
+
+  useEffect(() => {
+    if (!introDone || !historyTasks.length || openedHistory.current) return;
+    openedHistory.current = true;
+    document.getElementById("tasks")?.scrollIntoView({ behavior: "instant" });
+  }, [introDone, historyTasks.length]);
 
   useEffect(() => {
     if (status !== "listening") return;
@@ -326,16 +342,16 @@ export default function Page() {
   const wordCount = transcript.trim() ? transcript.trim().split(/\s+/).length : 0;
   const totalMs = metrics.transcriptionMs + metrics.extractionMs;
   const calibration = calculateCalibration(reviews, extractionModel);
-  const docked = introDone && (historyTasks.length > 0 || scrolled);
+  const docked = introDone && scrollProgress > 0.8;
 
   return <main className="shell">
-    <RecordOrb docked={docked} recording={status === "listening"} busy={status === "stopping" || status === "transcribing" || status === "processing"} ready={introDone} onReady={() => setIntroDone(true)} onPress={status === "listening" ? stopRecording : startRecording} />
+    <RecordOrb dockProgress={introDone ? scrollProgress : 0} recording={status === "listening"} busy={status === "stopping" || status === "transcribing" || status === "processing"} ready={introDone} onReady={() => setIntroDone(true)} onPress={status === "listening" ? stopRecording : startRecording} />
     {introDone && (status === "listening" || status === "stopping" || status === "transcribing") && <div className={`orb-status ${docked ? "is-docked" : ""}`} role="status">{status === "listening" ? "RECORDING · TAP CIRCLE TO STOP" : status === "stopping" ? "FINISHING RECORDING" : "TRANSCRIBING AUDIO"}</div>}
     <div className={`site-content ${introDone ? "is-ready" : ""}`}>
     <header className="top"><a className="wordmark" href="#top" aria-label="VOXTASK home">voxtask<span>.</span></a><nav aria-label="Main navigation"><a href="#tasks">TASKS</a><a href="#capture">CAPTURE</a><a href="#settings">SETTINGS</a></nav><span className="environment">VOICE → ACTION</span></header>
-    <section className={`hero ${historyTasks.length ? "has-history" : ""}`} id="top" aria-label="Record a thought" />
+    <section className="hero" id="top" aria-label="Record a thought" />
     <section className="history-section" id="tasks"><div className="history-heading"><div><p className="eyebrow">YOUR WORKSPACE</p><h1>Task history<span>.</span></h1></div><span className="count">{historyTasks.length} saved</span></div>
-      {historyTasks.length ? <div className="history-grid">{historyTasks.map(task => <article className="history-card" key={task.id}><div className="history-card-top"><span className={`priority priority-${task.priority}`}>{task.priority}</span><span>{task.dueDate ?? task.dueDateText ?? "No due date"}{task.dueTimeText ? ` · ${task.dueTimeText}` : task.dueTime ? ` · ${task.dueTime}` : ""}</span></div><h2>{task.title}</h2><p>{task.description || task.sourceText}</p><div className="history-card-foot"><span>Added {new Date(task.savedAt).toLocaleDateString()}</span><div className="history-card-controls"><label>Status <select value={task.status} onChange={event => updateHistoryStatus(task.id, event.target.value as Task["status"])}><option value="todo">To do</option><option value="in_progress">In progress</option><option value="done">Done</option></select></label><button onClick={() => removeHistoryTask(task.id)} aria-label={`Remove ${task.title} from history`}>Remove</button></div></div></article>)}</div> : <p className="history-empty">Your captured tasks will land here. Tap the circle to begin.</p>}
+      {historyTasks.length ? <div className="history-grid">{historyTasks.map(task => <article className={`history-card priority-border-${task.priority}`} key={task.id}><div className="history-card-top"><span className={`priority priority-${task.priority}`}>{task.priority}</span><span>{task.dueDate ?? task.dueDateText ?? "No due date"}{task.dueTimeText ? ` · ${task.dueTimeText}` : task.dueTime ? ` · ${task.dueTime}` : ""}</span></div><h2>{task.title}</h2><p>{task.description || task.sourceText}</p><div className="history-card-foot"><span>Added {new Date(task.savedAt).toLocaleDateString()}</span><div className="history-card-controls"><label>Status <select value={task.status} onChange={event => updateHistoryStatus(task.id, event.target.value as Task["status"])}><option value="todo">To do</option><option value="in_progress">In progress</option><option value="done">Done</option></select></label><button onClick={() => removeHistoryTask(task.id)} aria-label={`Remove ${task.title} from history`}>Remove</button></div></div></article>)}</div> : <p className="history-empty">Your captured tasks will land here. Tap the circle to begin.</p>}
     </section>
     <section className="workbench" id="capture"><div className="workbench-heading"><p className="eyebrow">CAPTURE STUDIO</p><h2>From thought to task<span>.</span></h2><p>Speak naturally, review the transcript, then save what matters.</p></div>
 
@@ -377,8 +393,8 @@ export default function Page() {
       <p className="device-note">Correct the task cards above, then save your review. Even when every field is right, save a review so accuracy counts it. Reviews stay in this browser until you export them.</p>
       <div className="calibration-actions"><label>Tasks the extractor missed <input type="number" min="0" max="30" value={missedTasks} onChange={event => setMissedTasks(Math.max(0, Math.min(30, Number(event.target.value) || 0)))} /></label><button onClick={saveReview} disabled={!reviewKey}>Save reviewed result</button><button onClick={exportReviews} disabled={!reviews.length}>Export reviews</button></div>
       {reviewMessage && <p role="status" className="device-note">{reviewMessage}</p>}
-      <div className="calibration-stats">{(["task", "date", "priority"] as const).map(field => <div key={field}><strong>{field === "task" ? "Title" : field === "date" ? "Date & time" : "Priority"}</strong><span>{calibration[field].total ? `${calibration[field].correct}/${calibration[field].total} correct · ${Math.round(calibration[field].rate! * 100)}% observed` : "No reviews yet"}</span>{calibration[field].lower !== null && <small>95% interval: {Math.round(calibration[field].lower! * 100)}–{Math.round(calibration[field].upper! * 100)}%</small>}</div>)}</div>
-      <p className="device-note">A title score needs {MIN_REVIEWED_TASKS} reviewed tasks for this model. Date/time and priority scores also need {MIN_REVIEWED_TASKS} reviews in the same output group. These are observed group accuracy, not certainty about an individual task. {calibration.missedTasks} missed tasks reported separately.</p>
+      <div className="calibration-stats">{(["task", "date", "priority", "status"] as const).map(field => <div key={field}><strong>{field === "task" ? "Title" : field === "date" ? "Date & time" : field === "status" ? "Status" : "Priority"}</strong><span>{calibration[field].total ? `${calibration[field].correct}/${calibration[field].total} correct · ${Math.round(calibration[field].rate! * 100)}% observed` : "No reviews yet"}</span>{calibration[field].lower !== null && <small>95% interval: {Math.round(calibration[field].lower! * 100)}–{Math.round(calibration[field].upper! * 100)}%</small>}</div>)}</div>
+      <p className="device-note">A title score needs {MIN_REVIEWED_TASKS} reviewed tasks for this model. Date/time and priority scores also need {MIN_REVIEWED_TASKS} reviews in the same output group. Status accuracy tracks corrected To do, In progress, and Done labels in new reviews. These are observed group accuracy, not certainty about an individual task. {calibration.missedTasks} missed tasks reported separately.</p>
     </section>
     </details>
     <details className="panel json"><summary>05 / Raw task JSON</summary><div className="mini-actions"><button onClick={() => navigator.clipboard.writeText(JSON.stringify({ tasks }, null, 2))}>Copy JSON</button><button onClick={() => setTasks([])}>Clear result</button></div><pre>{JSON.stringify({ tasks }, null, 2)}</pre></details>

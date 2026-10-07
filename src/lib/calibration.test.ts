@@ -12,6 +12,7 @@ describe("calibration", () => {
     expect(result.task).toMatchObject({ correct: 1, total: 1, rate: 1 });
     expect(result.date).toMatchObject({ correct: 0, total: 1, rate: 0 });
     expect(result.priority).toMatchObject({ correct: 0, total: 1, rate: 0 });
+    expect(result.status).toMatchObject({ correct: 0, total: 0, rate: null });
     expect(result.missedTasks).toBe(1);
     expect(result.task.lower).toBeLessThan(1);
     expect(calibratedConfidence(result, task)).toBeNull();
@@ -26,5 +27,12 @@ describe("calibration", () => {
 
   it("drops malformed stored reviews", () => {
     expect(parseReviews([review, { ...review, missedTasks: -1 }, { ...review, version: 2 }])).toHaveLength(1);
+  });
+
+  it("measures status corrections in new reviews while retaining older reviews", () => {
+    const withStatus: Review = { ...review, key: "status", predicted: [{ ...fields, status: "in_progress" }], corrected: [{ ...fields, status: "done" }] };
+    const result = calculateCalibration([review, withStatus], "model-a");
+    expect(result.status).toMatchObject({ correct: 0, total: 1, rate: 0 });
+    expect(parseReviews([review, withStatus])).toHaveLength(2);
   });
 });

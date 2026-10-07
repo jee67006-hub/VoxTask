@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { animate, stagger } from "animejs";
+import { useEffect, useRef, type CSSProperties } from "react";
+import { animate, stagger, steps } from "animejs";
 
 type Props = {
-  docked: boolean;
+  dockProgress: number;
   recording: boolean;
   busy: boolean;
   ready: boolean;
@@ -21,15 +21,16 @@ function arc(radius: number, start: number, end: number) {
 }
 
 const segments = [
-  { start: 0, end: 43, color: "#ff434e" },
-  { start: 45, end: 88, color: "#ffb92e" },
-  { start: 90, end: 133, color: "#15e8a3" },
-  { start: 135, end: 178, color: "#358fff" },
-  { start: 180, end: 223, color: "#16d5e7" },
-  { start: 225, end: 268, color: "#8bff40" },
-  { start: 270, end: 313, color: "#ffcf29" },
-  { start: 315, end: 358, color: "#7cff45" },
+  { start: 0, end: 45, color: "#ff434e" },
+  { start: 45, end: 90, color: "#ffb92e" },
+  { start: 90, end: 135, color: "#15e8a3" },
+  { start: 135, end: 180, color: "#358fff" },
+  { start: 180, end: 225, color: "#16d5e7" },
+  { start: 225, end: 270, color: "#8bff40" },
+  { start: 270, end: 315, color: "#ffcf29" },
+  { start: 315, end: 360, color: "#7cff45" },
 ];
+const ringBlinkDelays = [240, 0, 310, 70, 380, 130, 290, 40];
 
 const ticks = Array.from({ length: 144 }, (_, index) => {
   const angle = index * 2.5 * Math.PI / 180;
@@ -48,7 +49,7 @@ const dots = Array.from({ length: 39 }, (_, index) => {
   return { x: 88 + progress * 324, y: 355 - progress * 210 + Math.sin(progress * Math.PI * 2) * 29 };
 });
 
-export default function RecordOrb({ docked, recording, busy, ready, onReady, onPress }: Props) {
+export default function RecordOrb({ dockProgress, recording, busy, ready, onReady, onPress }: Props) {
   const root = useRef<HTMLButtonElement>(null);
   const onReadyRef = useRef(onReady);
   onReadyRef.current = onReady;
@@ -66,7 +67,12 @@ export default function RecordOrb({ docked, recording, busy, ready, onReady, onP
     const animations = [
       animate(element.querySelectorAll(".orb-tick"), { opacity: [0, 0.7], delay: stagger(7), duration: 360, ease: "outQuad" }),
       animate(element.querySelectorAll(".orb-shell"), { opacity: [0, 1], delay: 570, duration: 760, ease: "outSine" }),
-      animate(element.querySelectorAll(".orb-segment"), { opacity: [0, 1], strokeDashoffset: [155, 0], delay: stagger(95, { start: 760 }), duration: 740, ease: "outCubic" }),
+      animate(element.querySelectorAll(".orb-segment"), {
+        opacity: [0, 1, 0, 1, 0, 1],
+        delay: (_, index) => 760 + ringBlinkDelays[index ?? 0],
+        duration: 200,
+        ease: steps(5),
+      }),
       animate(element.querySelectorAll(".orb-inner"), { opacity: [0, 1], delay: 1450, duration: 780, ease: "outSine" }),
     ];
     const entrance = window.setTimeout(() => {
@@ -82,7 +88,8 @@ export default function RecordOrb({ docked, recording, busy, ready, onReady, onP
   return <button
     ref={root}
     type="button"
-    className={`record-orb ${docked ? "is-docked" : ""} ${recording ? "is-recording" : ""}`}
+    className={`record-orb ${recording ? "is-recording" : ""}`}
+    style={{ "--dock-progress": dockProgress } as CSSProperties}
     aria-label={recording ? "Stop recording" : busy ? "Recording is processing" : "Start recording"}
     aria-pressed={recording}
     disabled={!ready || (busy && !recording)}
@@ -95,7 +102,7 @@ export default function RecordOrb({ docked, recording, busy, ready, onReady, onP
         <circle cx="250" cy="250" r="207" fill="#171717" stroke="#292929" strokeWidth="3" />
       </g>
       <g className="orb-outer-rotation">
-        {segments.map((segment, index) => <path key={index} className="orb-segment" d={arc(232, segment.start, segment.end)} fill="none" stroke={segment.color} strokeWidth="4.2" strokeLinecap="round" strokeDasharray="155" />)}
+        {segments.map((segment, index) => <path key={index} className="orb-segment" d={arc(232, segment.start, segment.end)} fill="none" stroke={segment.color} strokeWidth="4.2" strokeLinecap="round" />)}
       </g>
       <g>{ticks.map((tick, index) => <line key={index} className="orb-tick" {...tick} stroke="#bd353d" strokeWidth="1.5" />)}</g>
       <g className="orb-inner">
