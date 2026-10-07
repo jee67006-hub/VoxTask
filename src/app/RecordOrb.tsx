@@ -25,7 +25,7 @@ const segments = [
   { start: 45.75, end: 89.25, color: "#ffb92e" },
   { start: 90.75, end: 134.25, color: "#15e8a3" },
   { start: 135.75, end: 179.25, color: "#358fff" },
-  { start: 180, end: 225, color: "#16d5e7" },
+  { start: 180.75, end: 224.25, color: "#16d5e7" },
   { start: 225, end: 270, color: "#8bff40" },
   { start: 270, end: 315, color: "#ffcf29" },
   { start: 315, end: 360, color: "#7cff45" },
