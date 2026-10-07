@@ -21,7 +21,7 @@ function arc(radius: number, start: number, end: number) {
 }
 
 const segments = [
-  { start: 0, end: 45, color: "#ff434e" },
+  { start: 0.75, end: 44.25, color: "#ff434e" },
   { start: 45, end: 90, color: "#ffb92e" },
   { start: 90, end: 135, color: "#15e8a3" },
   { start: 135, end: 180, color: "#358fff" },
