@@ -27,7 +27,7 @@ const segments = [
   { start: 135.75, end: 179.25, color: "#358fff" },
   { start: 180.75, end: 224.25, color: "#16d5e7" },
   { start: 225.75, end: 269.25, color: "#8bff40" },
-  { start: 270, end: 315, color: "#ffcf29" },
+  { start: 270.75, end: 314.25, color: "#ffcf29" },
   { start: 315, end: 360, color: "#7cff45" },
 ];
 const ringBlinkDelays = [240, 0, 310, 70, 380, 130, 290, 40];
