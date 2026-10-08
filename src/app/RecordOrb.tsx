@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { animate, stagger, steps } from "animejs";
 
 type Props = {
+  audioStream: MediaStream | null;
   recording: boolean;
   busy: boolean;
   ready: boolean;
@@ -48,9 +49,10 @@ const dots = Array.from({ length: 39 }, (_, index) => {
   return { x: 88 + progress * 324, y: 355 - progress * 210 + Math.sin(progress * Math.PI * 2) * 29 };
 });
 
-export default function RecordOrb({ recording, busy, ready, onReady, onPress }: Props) {
+export default function RecordOrb({ audioStream, recording, busy, ready, onReady, onPress }: Props) {
   const root = useRef<HTMLButtonElement>(null);
   const onReadyRef = useRef(onReady);
+  const ambientMotion = useRef<Array<{ pause: () => void; play: () => void }>>([]);
   onReadyRef.current = onReady;
 
   useEffect(() => {
@@ -78,11 +80,82 @@ export default function RecordOrb({ recording, busy, ready, onReady, onPress }: 
       onReadyRef.current();
       const outer = element.querySelector(".orb-outer-rotation");
       if (outer) animations.push(animate(outer, { rotate: "1turn", duration: 38000, loop: true, ease: "linear" }));
-      animations.push(animate(element.querySelectorAll(".orb-wave-line"), { scaleX: [0.8, 1], delay: stagger(22), duration: 2200, alternate: true, loop: true, ease: "inOutSine" }));
-      animations.push(animate(element.querySelectorAll(".orb-dot"), { y: [-7, 7], delay: stagger(35), duration: 2500, alternate: true, loop: true, ease: "inOutSine" }));
+      const waveMotion = animate(element.querySelectorAll(".orb-wave-line"), { scaleX: [0.8, 1], delay: stagger(22), duration: 2200, alternate: true, loop: true, ease: "inOutSine" });
+      const dotMotion = animate(element.querySelectorAll(".orb-dot"), { y: [-7, 7], delay: stagger(35), duration: 2500, alternate: true, loop: true, ease: "inOutSine" });
+      animations.push(waveMotion, dotMotion);
+      ambientMotion.current = [waveMotion, dotMotion];
     }, 2450);
-    return () => { window.clearTimeout(entrance); animations.forEach(animation => animation.pause()); };
+    return () => { window.clearTimeout(entrance); animations.forEach(animation => animation.pause()); ambientMotion.current = []; };
   }, []);
+
+  useEffect(() => {
+    ambientMotion.current.forEach(animation => recording ? animation.pause() : animation.play());
+  }, [recording]);
+
+  useEffect(() => {
+    const element = root.current;
+    if (!element || !recording || !audioStream) return;
+
+    const lines = Array.from(element.querySelectorAll<SVGLineElement>(".orb-wave-line"));
+    const circles = Array.from(element.querySelectorAll<SVGCircleElement>(".orb-dot"));
+    let context: AudioContext;
+    let frame = 0;
+    try {
+      context = new AudioContext();
+      const analyser = context.createAnalyser();
+      analyser.fftSize = 512;
+      analyser.smoothingTimeConstant = 0.78;
+      const source = context.createMediaStreamSource(audioStream);
+      source.connect(analyser);
+      const frequency = new Uint8Array(analyser.frequencyBinCount);
+      const waveform = new Uint8Array(analyser.fftSize);
+      void context.resume();
+      let lastDraw = 0;
+
+      const draw = (time: number) => {
+        frame = requestAnimationFrame(draw);
+        if (time - lastDraw < 30) return;
+        lastDraw = time;
+        analyser.getByteFrequencyData(frequency);
+        analyser.getByteTimeDomainData(waveform);
+
+        lines.forEach((line, index) => {
+          const progress = index / Math.max(1, lines.length - 1);
+          const bin = Math.min(frequency.length - 1, 2 + Math.round(Math.pow(progress, 1.45) * 105));
+          const signal = Math.max(0, (frequency[bin] / 255 - 0.07) / 0.55);
+          const width = Math.min(190, waveLines[index].width * (0.16 + signal * 1.28));
+          line.setAttribute("x1", String(250 - width));
+          line.setAttribute("x2", String(250 + width));
+          line.setAttribute("opacity", String(0.35 + signal * 0.55));
+        });
+
+        circles.forEach((circle, index) => {
+          const sampleIndex = Math.round(index / Math.max(1, circles.length - 1) * (waveform.length - 1));
+          const sample = (waveform[sampleIndex] - 128) / 128;
+          circle.setAttribute("cy", String(250 - sample * 86));
+          circle.setAttribute("r", String(3.6 + Math.abs(sample) * 2.2));
+        });
+      };
+      frame = requestAnimationFrame(draw);
+    } catch {
+      return;
+    }
+
+    return () => {
+      cancelAnimationFrame(frame);
+      lines.forEach((line, index) => {
+        const width = waveLines[index].width;
+        line.setAttribute("x1", String(250 - width));
+        line.setAttribute("x2", String(250 + width));
+        line.setAttribute("opacity", "0.76");
+      });
+      circles.forEach((circle, index) => {
+        circle.setAttribute("cy", String(dots[index].y));
+        circle.setAttribute("r", "3.6");
+      });
+      void context.close();
+    };
+  }, [audioStream, recording]);
 
   return <button
     ref={root}

@@ -66,6 +66,7 @@ export default function Page() {
   const [liveDraft, setLiveDraft] = useState("");
   const [finalV3, setFinalV3] = useState("");
   const [inputDevice, setInputDevice] = useState("Not selected yet");
+  const [visualizerStream, setVisualizerStream] = useState<MediaStream | null>(null);
   const [selectedDeviceId, setSelectedDeviceId] = useState("default");
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [metrics, setMetrics] = useState(emptyMetrics);
@@ -165,6 +166,7 @@ export default function Page() {
     try {
       if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") throw new Error("Microphone recording is unavailable in this browser.");
       stream.current = await navigator.mediaDevices.getUserMedia({ audio: selectedDeviceId === "default" ? true : { deviceId: { exact: selectedDeviceId } } });
+      setVisualizerStream(stream.current);
       setInputDevice(stream.current.getAudioTracks()[0]?.label || "Default microphone (name unavailable)");
       chunks.current = [];
       const liveSession = new LiveWhisperSession(
@@ -185,6 +187,8 @@ export default function Page() {
         setHasAudio(audio.current.size > 0);
         if (audio.current.size) { recordingUrlRef.current = URL.createObjectURL(audio.current); setRecordingUrl(recordingUrlRef.current); }
         stream.current?.getTracks().forEach(track => track.stop());
+        stream.current = null;
+        setVisualizerStream(null);
         setStatus("transcribing");
         if (liveMode.current) { liveSession.finish(); await liveSession.whenIdle(); }
         try {
@@ -233,6 +237,8 @@ export default function Page() {
       listening.current = false;
       liveWhisper.current?.cancel();
       stream.current?.getTracks().forEach(track => track.stop());
+      stream.current = null;
+      setVisualizerStream(null);
       setStatus("error"); setMessage(error instanceof Error ? error.message : "Microphone access failed.");
     }
   }
@@ -352,7 +358,7 @@ export default function Page() {
     setDockVisible(visible);
   }
   return <main className="shell">
-    <RecordOrb recording={status === "listening"} busy={status === "stopping" || status === "transcribing" || status === "processing"} ready={introDone} onReady={finishIntro} onPress={status === "listening" ? stopRecording : startRecording} />
+    <RecordOrb audioStream={visualizerStream} recording={status === "listening"} busy={status === "stopping" || status === "transcribing" || status === "processing"} ready={introDone} onReady={finishIntro} onPress={status === "listening" ? stopRecording : startRecording} />
     {introDone && status !== "listening" && status !== "stopping" && status !== "transcribing" && status !== "processing" && <div className="orb-status orb-hint" aria-hidden="true">TAP TO START RECORDING</div>}
     {introDone && (status === "listening" || status === "stopping" || status === "transcribing") && <div className="orb-status" role="status">{status === "listening" ? "RECORDING · TAP CIRCLE TO STOP" : status === "stopping" ? "FINISHING RECORDING" : "TRANSCRIBING AUDIO"}</div>}
     <footer className={`record-dock ${dockVisible ? "is-visible" : ""}`} aria-hidden={!dockVisible} inert={!dockVisible}>
