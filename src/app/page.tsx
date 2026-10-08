@@ -353,6 +353,7 @@ export default function Page() {
   }
   return <main className="shell">
     <RecordOrb recording={status === "listening"} busy={status === "stopping" || status === "transcribing" || status === "processing"} ready={introDone} onReady={finishIntro} onPress={status === "listening" ? stopRecording : startRecording} />
+    {introDone && status !== "listening" && status !== "stopping" && status !== "transcribing" && status !== "processing" && <div className="orb-status orb-hint" aria-hidden="true">TAP TO START RECORDING</div>}
     {introDone && (status === "listening" || status === "stopping" || status === "transcribing") && <div className="orb-status" role="status">{status === "listening" ? "RECORDING · TAP CIRCLE TO STOP" : status === "stopping" ? "FINISHING RECORDING" : "TRANSCRIBING AUDIO"}</div>}
     <footer className={`record-dock ${dockVisible ? "is-visible" : ""}`} aria-hidden={!dockVisible} inert={!dockVisible}>
       <a className="dock-brand" href="#top" aria-label="VOXTASK home">voxtask<span>.</span><small>VOICE → ACTION</small></a>
