@@ -109,21 +109,34 @@ export default function RecordOrb({ audioStream, recording, busy, ready, onReady
       source.connect(analyser);
       const frequency = new Uint8Array(analyser.frequencyBinCount);
       const waveform = new Uint8Array(analyser.fftSize);
+      const dotPositions = dots.map(dot => dot.y);
       void context.resume();
       let lastDraw = 0;
+      let smoothedLevel = 0;
 
       const draw = (time: number) => {
         frame = requestAnimationFrame(draw);
-        if (time - lastDraw < 30) return;
+        if (time - lastDraw < 16) return;
         lastDraw = time;
         analyser.getByteFrequencyData(frequency);
         analyser.getByteTimeDomainData(waveform);
 
+        let sumSquares = 0;
+        for (const value of waveform) {
+          const sample = (value - 128) / 128;
+          sumSquares += sample * sample;
+        }
+        const rms = Math.sqrt(sumSquares / waveform.length);
+        const targetLevel = Math.min(1, Math.max(0, (rms - 0.008) / 0.05));
+        smoothedLevel += (targetLevel - smoothedLevel) * 0.2;
+
         lines.forEach((line, index) => {
           const progress = index / Math.max(1, lines.length - 1);
           const bin = Math.min(frequency.length - 1, 2 + Math.round(Math.pow(progress, 1.45) * 105));
-          const signal = Math.max(0, (frequency[bin] / 255 - 0.07) / 0.55);
-          const width = Math.min(190, waveLines[index].width * (0.16 + signal * 1.28));
+          const signal = Math.min(1, Math.max(0, (frequency[bin] / 255 - 0.07) / 0.55));
+          const lineY = (waveLines[index].y - 250) * 1.18;
+          const insideCircleWidth = Math.sqrt(Math.max(0, 180 * 180 - lineY * lineY));
+          const width = Math.min(insideCircleWidth, waveLines[index].width * (0.2 + signal * 0.92));
           line.setAttribute("x1", String(250 - width));
           line.setAttribute("x2", String(250 + width));
           line.setAttribute("opacity", String(0.35 + signal * 0.55));
@@ -131,9 +144,18 @@ export default function RecordOrb({ audioStream, recording, busy, ready, onReady
 
         circles.forEach((circle, index) => {
           const sampleIndex = Math.round(index / Math.max(1, circles.length - 1) * (waveform.length - 1));
-          const sample = (waveform[sampleIndex] - 128) / 128;
-          circle.setAttribute("cy", String(250 - sample * 86));
-          circle.setAttribute("r", String(3.6 + Math.abs(sample) * 2.2));
+          let sample = 0;
+          let samples = 0;
+          for (let offset = -2; offset <= 2; offset++) {
+            const value = waveform[Math.max(0, Math.min(waveform.length - 1, sampleIndex + offset))];
+            sample += (value - 128) / 128;
+            samples++;
+          }
+          sample /= samples;
+          const targetY = 250 - sample * 78 * smoothedLevel;
+          dotPositions[index] += (targetY - dotPositions[index]) * 0.34;
+          circle.setAttribute("cy", String(dotPositions[index]));
+          circle.setAttribute("r", String(3.6 + Math.abs(sample) * smoothedLevel * 2.2));
         });
       };
       frame = requestAnimationFrame(draw);
