@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useRef, type CSSProperties } from "react";
+import { useEffect, useRef } from "react";
 import { animate, stagger, steps } from "animejs";
 
 type Props = {
-  dockProgress: number;
   recording: boolean;
   busy: boolean;
   ready: boolean;
@@ -49,7 +48,7 @@ const dots = Array.from({ length: 39 }, (_, index) => {
   return { x: 88 + progress * 324, y: 355 - progress * 210 + Math.sin(progress * Math.PI * 2) * 29 };
 });
 
-export default function RecordOrb({ dockProgress, recording, busy, ready, onReady, onPress }: Props) {
+export default function RecordOrb({ recording, busy, ready, onReady, onPress }: Props) {
   const root = useRef<HTMLButtonElement>(null);
   const onReadyRef = useRef(onReady);
   onReadyRef.current = onReady;
@@ -89,7 +88,6 @@ export default function RecordOrb({ dockProgress, recording, busy, ready, onRead
     ref={root}
     type="button"
     className={`record-orb ${recording ? "is-recording" : ""}`}
-    style={{ "--dock-progress": dockProgress } as CSSProperties}
     aria-label={recording ? "Stop recording" : busy ? "Recording is processing" : "Start recording"}
     aria-pressed={recording}
     disabled={!ready || (busy && !recording)}

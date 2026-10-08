@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Task } from "@/lib/tasks";
 import { LiveWhisperSession } from "@/lib/live-whisper";
 import { calculateCalibration, calibratedConfidence, parseReviews, reviewedFields, CALIBRATION_VERSION, MIN_REVIEWED_TASKS, type Review } from "@/lib/calibration";
@@ -51,7 +51,9 @@ export default function Page() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [historyTasks, setHistoryTasks] = useState<HistoryTask[]>([]);
   const [introDone, setIntroDone] = useState(false);
-  const [scrollProgress, setScrollProgress] = useState(0);
+  const [dockVisible, setDockVisible] = useState(false);
+  const introDoneRef = useRef(false);
+  const dockVisibilityRef = useRef(false);
   const [savedCurrentResult, setSavedCurrentResult] = useState(false);
   const [predictedTasks, setPredictedTasks] = useState<Task[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -99,7 +101,12 @@ export default function Page() {
       frame = requestAnimationFrame(() => {
         frame = 0;
         const progress = Math.min(1, Math.max(0, window.scrollY / (window.innerHeight * 0.9)));
-        setScrollProgress((1 - Math.cos(Math.PI * progress)) / 2);
+        document.documentElement.style.setProperty("--dock-progress", String(progress));
+        const visible = introDoneRef.current && progress > 0.85;
+        if (dockVisibilityRef.current !== visible) {
+          dockVisibilityRef.current = visible;
+          setDockVisible(visible);
+        }
       });
     };
     update();
@@ -335,11 +342,19 @@ export default function Page() {
   const wordCount = transcript.trim() ? transcript.trim().split(/\s+/).length : 0;
   const totalMs = metrics.transcriptionMs + metrics.extractionMs;
   const calibration = calculateCalibration(reviews, extractionModel);
-  const dockVisible = introDone && scrollProgress > 0.85;
+  function finishIntro() {
+    introDoneRef.current = true;
+    setIntroDone(true);
+    const progress = Math.min(1, Math.max(0, window.scrollY / (window.innerHeight * 0.9)));
+    document.documentElement.style.setProperty("--dock-progress", String(progress));
+    const visible = progress > 0.85;
+    dockVisibilityRef.current = visible;
+    setDockVisible(visible);
+  }
   return <main className="shell">
-    <RecordOrb dockProgress={introDone ? scrollProgress : 0} recording={status === "listening"} busy={status === "stopping" || status === "transcribing" || status === "processing"} ready={introDone} onReady={() => setIntroDone(true)} onPress={status === "listening" ? stopRecording : startRecording} />
-    {introDone && (status === "listening" || status === "stopping" || status === "transcribing") && <div className="orb-status" style={{ "--dock-progress": scrollProgress } as CSSProperties} role="status">{status === "listening" ? "RECORDING · TAP CIRCLE TO STOP" : status === "stopping" ? "FINISHING RECORDING" : "TRANSCRIBING AUDIO"}</div>}
-    <footer className={`record-dock ${dockVisible ? "is-visible" : ""}`} style={{ "--dock-progress": introDone ? scrollProgress : 0 } as CSSProperties} aria-hidden={!dockVisible} inert={!dockVisible}>
+    <RecordOrb recording={status === "listening"} busy={status === "stopping" || status === "transcribing" || status === "processing"} ready={introDone} onReady={finishIntro} onPress={status === "listening" ? stopRecording : startRecording} />
+    {introDone && (status === "listening" || status === "stopping" || status === "transcribing") && <div className="orb-status" role="status">{status === "listening" ? "RECORDING · TAP CIRCLE TO STOP" : status === "stopping" ? "FINISHING RECORDING" : "TRANSCRIBING AUDIO"}</div>}
+    <footer className={`record-dock ${dockVisible ? "is-visible" : ""}`} aria-hidden={!dockVisible} inert={!dockVisible}>
       <a className="dock-brand" href="#top" aria-label="VOXTASK home">voxtask<span>.</span><small>VOICE → ACTION</small></a>
       <span className="dock-orb-space" aria-hidden="true" />
       <nav aria-label="Main navigation"><a href="#tasks">TASKS</a><a href="#capture">CAPTURE</a><a href="#settings">SETTINGS</a></nav>

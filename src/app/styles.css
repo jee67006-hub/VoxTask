@@ -30,14 +30,14 @@ a { color: inherit; }
 .eyebrow, .count, .meta, .metrics, .state, .priority, .review, .verified { font-family: Consolas, "Courier New", monospace; font-size: 11px; letter-spacing: .08em; }
 .hero { min-height: 100svh; background: #202020; }
 
-.record-orb { position: fixed; z-index: 30; width: min(68vw, 500px); aspect-ratio: 1; top: calc(50% + (50dvh - var(--dock-center-offset)) * var(--dock-progress, 0)); left: 50%; transform: translate(-50%, -50%) scale(calc(1 - .81 * var(--dock-progress, 0))); transform-origin: center; padding: 0; margin: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; transition: top .25s cubic-bezier(.22,.61,.36,1), transform .25s cubic-bezier(.22,.61,.36,1), filter .3s; -webkit-tap-highlight-color: transparent; }
+.record-orb { position: fixed; z-index: 30; width: min(68vw, 500px); aspect-ratio: 1; top: 50%; left: 50%; transform: translate3d(-50%, calc(-50% + (50dvh - var(--dock-center-offset)) * var(--dock-progress, 0)), 0) scale(calc(1 - .81 * var(--dock-progress, 0))); transform-origin: center; padding: 0; margin: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; transition: filter .3s; will-change: transform; -webkit-tap-highlight-color: transparent; }
 .record-orb:hover:not(:disabled) { border: 0; background: transparent; filter: brightness(1.14); }
 .record-orb:disabled { opacity: 1; cursor: default; }
 .record-orb svg { width: 100%; height: 100%; display: block; }
 .record-orb.is-recording { filter: drop-shadow(0 0 24px rgba(255,73,83,.38)); }
 .record-orb.is-recording .orb-wave { transform: scaleY(1.18); transform-origin: 250px 250px; }
-.orb-status { position: fixed; z-index: 29; top: calc(50% + min(34vw, 250px) + 20px + (50dvh - var(--dock-height) - min(34vw, 250px) - 48px) * var(--dock-progress, 0)); left: 50%; transform: translateX(-50%); font: 700 11px Consolas, monospace; letter-spacing: .14em; color: #ff868d; white-space: nowrap; transition: top .25s cubic-bezier(.22,.61,.36,1); }
-.record-dock { position: fixed; z-index: 20; left: 50%; bottom: var(--dock-bottom); width: min(940px, calc(100% - 36px)); height: var(--dock-height); display: grid; grid-template-columns: minmax(0, 1fr) 116px minmax(0, 1fr); align-items: center; padding: 0 clamp(20px, 3vw, 34px); border: 1px solid rgba(255,255,255,.13); border-radius: 999px; background: linear-gradient(145deg, rgba(44,43,43,.97), rgba(24,24,24,.98)); box-shadow: 0 18px 48px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.25) inset; backdrop-filter: blur(20px); color: #c9c1be; pointer-events: none; transform: translate(-50%, calc((1 - var(--dock-progress, 0)) * (100% + 28px))); opacity: clamp(0, calc((var(--dock-progress, 0) - .55) * 2.23), 1); transition: transform .35s cubic-bezier(.22,.61,.36,1), opacity .3s ease; }
+.orb-status { position: fixed; z-index: 29; top: 50%; left: 50%; transform: translate3d(-50%, calc(min(34vw, 250px) + 20px + (50dvh - var(--dock-height) - min(34vw, 250px) - 48px) * var(--dock-progress, 0)), 0); font: 700 11px Consolas, monospace; letter-spacing: .14em; color: #ff868d; white-space: nowrap; }
+.record-dock { position: fixed; z-index: 20; left: 50%; bottom: var(--dock-bottom); width: min(940px, calc(100% - 36px)); height: var(--dock-height); display: grid; grid-template-columns: minmax(0, 1fr) 116px minmax(0, 1fr); align-items: center; padding: 0 clamp(20px, 3vw, 34px); border: 1px solid rgba(255,255,255,.13); border-radius: 999px; background: linear-gradient(145deg, rgba(44,43,43,.97), rgba(24,24,24,.98)); box-shadow: 0 18px 48px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.25) inset; backdrop-filter: blur(6px); color: #c9c1be; pointer-events: none; transform: translate3d(-50%, calc((1 - var(--dock-progress, 0)) * (100% + 28px)), 0); opacity: clamp(0, calc((var(--dock-progress, 0) - .55) * 2.23), 1); }
 .record-dock.is-visible { pointer-events: auto; }
 .dock-brand { display: block; align-self: center; width: fit-content; min-height: 44px; color: #f4f3f2; font-size: 22px; font-weight: 800; letter-spacing: -.075em; line-height: 1; text-decoration: none; font-style: italic; white-space: nowrap; }
 .dock-brand span { color: var(--red); }
@@ -117,8 +117,8 @@ textarea { width: 100%; min-height: 115px; resize: vertical; line-height: 1.55; 
 
 @media (max-width: 700px) {
   :root { --dock-height: 100px; --dock-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); --dock-center-offset: calc(60px + env(safe-area-inset-bottom, 0px)); }
-  .record-orb { width: min(95vw, 420px); transform: translate(-50%,-50%) scale(calc(1 - .79 * var(--dock-progress, 0))); }
-  .orb-status { top: calc(50% + min(47.5vw, 210px) + 12px + (50dvh - var(--dock-height) - min(47.5vw, 210px) - 40px) * var(--dock-progress, 0)); font-size: 9px; }
+  .record-orb { width: min(95vw, 420px); transform: translate3d(-50%, calc(-50% + (50dvh - var(--dock-center-offset)) * var(--dock-progress, 0)), 0) scale(calc(1 - .79 * var(--dock-progress, 0))); }
+  .orb-status { transform: translate3d(-50%, calc(min(47.5vw, 210px) + 12px + (50dvh - var(--dock-height) - min(47.5vw, 210px) - 40px) * var(--dock-progress, 0)), 0); font-size: 9px; }
   .record-dock { width: calc(100% - 20px); grid-template-columns: minmax(0, 1fr) 90px minmax(0, 1fr); padding: 0 16px; }
   .dock-brand { font-size: 17px; }
   .dock-brand small { font-size: 7px; letter-spacing: .06em; }
