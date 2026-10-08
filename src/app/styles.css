@@ -122,8 +122,8 @@ textarea { width: 100%; min-height: 115px; resize: vertical; line-height: 1.55; 
   .record-dock { width: calc(100% - 20px); grid-template-columns: minmax(0, 1fr) 90px minmax(0, 1fr); padding: 0 16px; }
   .dock-brand { font-size: 17px; }
   .dock-brand small { font-size: 7px; letter-spacing: .06em; }
-  .record-dock nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 8px; }
-  .record-dock nav a { min-height: 44px; font-size: 8px; letter-spacing: .02em; }
+  .record-dock nav { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 0; }
+  .record-dock nav a { min-height: 22px; font-size: 8px; letter-spacing: .06em; }
   .history-section { padding: 100px 16px 70px; }.history-grid { grid-template-columns: 1fr; }.history-heading h1, .workbench-heading h2 { font-size: 38px; }
   .workbench { padding: 80px 16px 190px; }.panel { padding: 16px; }.device-row { align-items: stretch; flex-direction: column; }.fields { grid-template-columns: repeat(2,minmax(0,1fr)); }.task-heading { flex-direction: column; align-items: stretch; }.calibration-stats { grid-template-columns: 1fr; }
 }
